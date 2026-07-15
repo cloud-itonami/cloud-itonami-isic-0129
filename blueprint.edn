@@ -1,0 +1,48 @@
+{:itonami.blueprint/id "cloud-itonami-isic-0129"
+ :itonami.blueprint/name "Growing Of Other Perennial Crops Coordination"
+ :itonami.blueprint/isic-rev5 "0129"
+ :itonami.blueprint/domain :agriculture/other-perennial-crop-cultivation
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:rural-livelihoods :farm-labor-efficiency :pesticide-safety]
+ :itonami.blueprint/governor :perennial-governor
+ :itonami.blueprint/robotics false
+ :itonami.blueprint/required-technologies [:robotics :identity :forms :dmn :bpmn :audit-ledger :telemetry]
+ :itonami.blueprint/optional-technologies []
+ :itonami.blueprint/status :public-oss
+ :itonami.blueprint/maturity :implemented
+ :itonami.blueprint/implemented-slice
+ "`:perennial-governor` is implemented end-to-end in `src/perennial` as a
+ PERENNIAL-CROP-CULTIVATION FARM OPERATIONS COORDINATION actor -- Perennial
+ Advisor (LLM proposal-only) ⊣ Perennial-Crop Operations Governor (closed-
+ op-allowlist / cultivation-lot-registration-before-any-action hard-gate /
+ applicator-license-sprayer-calibration-pre-harvest-interval-restricted-
+ entry-interval-wind-speed-buffer-zone hard-gates / unresolved-crop-
+ health-flag hard-gate / field-equipment-and-pesticide-decision permanent
+ block). `:itonami.blueprint/robotics` is honestly `false` -- this actor
+ holds NO harvester/sprayer/applicator field-equipment-control authority
+ (a HARD, permanent governor block, never overridable by human approval --
+ see `perennial.governor` ns docstring). ISIC Rev.5 0129 is the RESIDUAL
+ (not-elsewhere-classified) perennial-crop growing division -- perennial
+ crops not already covered by 0121-0127 (grapes / tropical-subtropical
+ fruits / citrus / pome-and-stone fruits / other tree-and-bush fruits and
+ nuts / oleaginous fruits / beverage crops): the concrete illustrative
+ crops chosen for this build are BAMBOO (culm harvest), CORK OAK (bark
+ stripping), and ornamental/nursery trees and shrubs, all grown and OWNED
+ by the operator (unlike ISIC 0161, support activities for crop
+ production, which never owns the crop it services). Every one of its
+ four proposal ops (`:log-cultivation-record` / `:schedule-field-
+ operation` / `:flag-crop-health-concern` / `:order-supplies`) carries
+ `:effect :propose` ONLY -- the governor HARD-holds any proposal that
+ doesn't (`effect-not-propose-violations`). Crop-operation types split
+ into mechanical harvest/maintenance (bamboo culm harvest, cork bark
+ strip, ornamental pruning -- no chemical-application safety window at
+ all) and chemical-application (herbicide/fungicide/insecticide, a
+ genuine pre-harvest interval, restricted-entry interval, maximum safe
+ wind speed, and minimum buffer zone) -- the Governor's chemical-specific
+ checks are skipped entirely, never fabricated, for mechanical
+ crop-operation types. `:flag-crop-health-concern` always escalates to a
+ human, at every phase, regardless of advisor confidence;
+ `:order-supplies` above a cost threshold likewise always escalates. This
+ build ships NO JVM-only interop anywhere in `src/` (all source is
+ `.cljc`) per this workspace's cljs-first runtime-priority rule. See
+ `README.md` for the full governor-check enumeration."}
