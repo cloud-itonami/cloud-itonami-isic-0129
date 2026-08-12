@@ -393,6 +393,17 @@
 
 ;; ───────────────────────────── rendering ─────────────────────────────
 
+(defn- unregistered-subjects
+  "Subjects this scenario filed a proposal against that the store does NOT
+  hold a cultivation-lot record for, measured against the finished store
+  via `perennial.store/cultivation-lot-registered?` -- the same predicate
+  the Governor's registration invariant uses. Derived rather than
+  asserted, so adding or removing an unregistered subject in `steps`
+  moves the number on the page by itself."
+  [db]
+  (vec (sort (distinct (remove #(store/cultivation-lot-registered? db %)
+                               (map :subject (steps)))))))
+
 (defn hard-holds
   "HARD governor holds on the ledger. A hold fact carries a non-empty
   `:basis` only when `perennial.governor/check` found real violations --
@@ -445,7 +456,8 @@
         rules (distinct (mapcat :basis hs))
         approvals (filter #(= :approval-granted (:t %)) ledger)
         commits (filter #(= :committed (:t %)) ledger)
-        lots (:cultivation-lots db)]
+        lots (:cultivation-lots db)
+        unreg (unregistered-subjects db)]
     (section
      "運用サマリ（この実行の実測値）"
      (str "全て " (code "perennial.render-html/run-demo!") " の返り値から算出。"
@@ -453,7 +465,9 @@
      (table ["指標" "値"]
             (map tr
                  [["登録済み cultivation lot" (num-cell (count lots))]
-                  ["未登録のまま提案された subject" (num-cell 1)]
+                  ["未登録のまま提案された subject"
+                   (str (num-cell (count unreg)) " "
+                        (str/join " " (map #(code %) unreg)))]
                   ["actor に投入した提案 (request)" (num-cell (count (steps)))]
                   ["監査台帳 fact 総数" (num-cell (count ledger))]
                   ["HARD hold（人間に届かない）" (crit (count hs))]
