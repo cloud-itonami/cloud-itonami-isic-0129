@@ -88,53 +88,96 @@
   scenario does with the lot (it documents the driver below, not the
   domain). `:override` values are all functions of the lot's own
   crop-operation-type window, so the seeded violation is exactly one
-  step past the published limit."
+  step past the published limit.
+
+  `:expects` is the scenario's DECLARED INTENT for that lot -- the exact
+  set of HARD rules it is built to trip. It is authored (that is what
+  makes it a claim) but it is not decorative: `-main` refuses to write
+  the page unless the Governor's actual output for that subject matches
+  it exactly, so the prose in `:demonstrates` cannot quietly drift away
+  from what the code does."
   [{:id "lot-001" :field-id "field-42" :ha 3.5
     :ct :spray/herbicide-nursery-broadcast :j :jp/maff
+    :expects #{:already-logged}
     :demonstrates "全 clean。schedule → order-supplies(閾値以下) → log(人間承認) → 二重 log で :already-logged"}
    {:id "lot-002" :field-id "field-77" :ha 8.0
     :ct :harvest/bamboo-culm :j :jp/maff
+    :expects #{}
     :demonstrates "機械作業 clean。低 confidence の schedule、cost 未申告の order-supplies、log(人間承認)"}
    {:id "lot-003" :field-id "field-08" :ha 1.2
     :ct :spray/fungicide-ornamental-foliar :j :us/epa
     :override {:applicator-license-offset-days -3}
+    :expects #{:applicator-license-expired}
     :demonstrates "散布者資格が 3 日前に失効 → :applicator-license-expired"}
    {:id "lot-004" :field-id "field-11" :ha 6.4
     :ct :spray/insecticide-bamboo-ground :j :eu/reg1107
     :override {:sprayer-calibration-offset-days -120}
+    :expects #{:sprayer-calibration-overdue}
     :demonstrates "散布機器の校正が 120 日前(基準 90 日) → :sprayer-calibration-overdue"}
    {:id "lot-005" :field-id "field-15" :ha 2.1
     :ct :spray/herbicide-nursery-broadcast :j :jp/maff
     :override-fn (fn [ct] {:days-until-harvest (dec (:pre-harvest-interval-days ct))})
+    :expects #{:pre-harvest-interval-violated}
     :demonstrates "収穫前日数が基準 -1 日 → :pre-harvest-interval-violated"}
    {:id "lot-006" :field-id "field-19" :ha 0.9
     :ct :spray/fungicide-ornamental-foliar :j :us/epa
     :override-fn (fn [ct] {:hours-until-reentry (dec (:restricted-entry-interval-hours ct))})
+    :expects #{:restricted-entry-interval-violated}
     :demonstrates "再入場猶予が基準 -1 時間 → :restricted-entry-interval-violated"}
    {:id "lot-007" :field-id "field-23" :ha 12.0
     :ct :spray/insecticide-bamboo-ground :j :jp/maff
     :override-fn (fn [ct] {:wind-speed-kmh (+ (:max-wind-speed-kmh ct) 6.0)})
+    :expects #{:wind-speed-exceeded}
     :demonstrates "散布時風速が上限 +6.0 km/h → :wind-speed-exceeded"}
    {:id "lot-008" :field-id "field-27" :ha 4.7
     :ct :spray/herbicide-nursery-broadcast :j :eu/reg1107
     :override-fn (fn [ct] {:buffer-zone-actual-m (- (:min-buffer-zone-m ct) 7.0)})
+    :expects #{:buffer-zone-violated}
     :demonstrates "緩衝地帯が最小 -7.0 m → :buffer-zone-violated"}
    {:id "lot-009" :field-id "field-31" :ha 5.3
     :ct :harvest/cork-bark-strip :j :jp/maff
     :evidence partial-evidence
+    :expects #{:evidence-incomplete}
     :demonstrates "必要書類 2 点欠落 → :evidence-incomplete(機械作業でも法域要件は効く)"}
    {:id "lot-010" :field-id "field-35" :ha 1.8
     :ct :maintenance/ornamental-pruning :j :jp/maff
     :concern? true
+    :expects #{:crop-health-flag-unresolved}
     :demonstrates "未解決の作物健全性フラグ。flag は人間承認、log は :crop-health-flag-unresolved"}
    {:id "lot-011" :field-id "field-39" :ha 2.6
     :ct :spray/fungicide-ornamental-foliar :j :jp/maff
+    :expects #{:no-spec-basis :effect-not-propose
+               :field-equipment-or-pesticide-decision-blocked :op-not-allowed}
     :demonstrates "scope 系の hard 検査用 clean lot。引用無し / :effect 偽装 / 機器操作要求 / 許可外 op"}])
 
 (def ^:private unregistered-lot-id
   "Deliberately NOT seeded into the store -- the registration invariant
   must hold for a subject the actor never checked in."
   "lot-012")
+
+(def ^:private unregistered-lot-expects
+  "Declared intent for `unregistered-lot-id`, checked the same way as
+  every seeded lot's `:expects`."
+  #{:cultivation-lot-not-registered})
+
+(def hard-rule-catalog
+  "Every hard rule `perennial.governor` is able to mint, read out of the
+  Governor's OWN source on the classpath rather than re-typed here. This
+  is what lets the page say `14 of 14` instead of `14`, and it grows by
+  itself the day a fifteenth rule is added.
+
+  Honest about its own reach: this is a textual scan for `:rule :x`
+  violation literals in `perennial/governor.cljc`. A rule minted from
+  another namespace, or with a computed keyword, would not appear. Both
+  would be a departure from how this Governor is written today, and the
+  per-subject `:expects` invariant would still hold the scenario to what
+  actually fires."
+  (->> (slurp (io/resource "perennial/governor.cljc"))
+       (re-seq #":rule\s+:([a-z0-9?!-]+)")
+       (map (comp keyword second))
+       distinct
+       sort
+       vec))
 
 (defn- build-lot
   "Materialize one `lot-specs` entry into a store record. Day offsets are
@@ -415,6 +458,40 @@
   (filterv #(and (= :governor-hold (:t %)) (seq (:basis %)))
            (store/audit-trail db)))
 
+(defn- fired-rules
+  "subject -> the set of HARD rules the Governor actually minted for it in
+  this run, read off the ledger."
+  [db]
+  (reduce (fn [m f] (update m (:subject f) (fnil into #{}) (:basis f)))
+          {}
+          (hard-holds db)))
+
+(defn- declared-rules
+  "subject -> the set of HARD rules this scenario DECLARES it is built to
+  trip (`:expects`), covering the unregistered subject too."
+  []
+  (into {unregistered-lot-id unregistered-lot-expects}
+        (map (juxt :id #(set (:expects %))) lot-specs)))
+
+(defn expectation-mismatches
+  "Every subject whose declared `:expects` does not equal what the
+  Governor actually did. Empty is the only acceptable value -- `-main`
+  throws otherwise, which is what keeps the `:demonstrates` prose on the
+  page from becoming a claim nobody checks."
+  [db]
+  (let [declared (declared-rules)
+        actual (fired-rules db)]
+    (vec (for [s (sort (distinct (concat (keys declared) (keys actual))))
+               :let [d (get declared s #{})
+                     a (get actual s #{})]
+               :when (not= d a)]
+           {:subject s :declared d :actual a}))))
+
+(defn uncovered-rules
+  "Hard rules in `hard-rule-catalog` that this scenario never made fire."
+  [db]
+  (vec (remove (set (mapcat :basis (hard-holds db))) hard-rule-catalog)))
+
 (defn- esc [v]
   (-> (str v)
       (str/replace "&" "&amp;")
@@ -462,20 +539,31 @@
      "運用サマリ（この実行の実測値）"
      (str "全て " (code "perennial.render-html/run-demo!") " の返り値から算出。"
           "HARD hold は人間に届かない — 承認では上書きできない。")
-     (table ["指標" "値"]
-            (map tr
-                 [["登録済み cultivation lot" (num-cell (count lots))]
-                  ["未登録のまま提案された subject"
-                   (str (num-cell (count unreg)) " "
-                        (str/join " " (map #(code %) unreg)))]
-                  ["actor に投入した提案 (request)" (num-cell (count (steps)))]
-                  ["監査台帳 fact 総数" (num-cell (count ledger))]
-                  ["HARD hold（人間に届かない）" (crit (count hs))]
-                  ["HARD hold で発火した異なる rule 種" (crit (count rules))]
-                  ["人間承認まで上がった escalation" (warn (count approvals))]
-                  ["Governor clean での自動確定" (ok (count commits))]
-                  ["actor が合格時に鋳造する fact 数（実測）"
-                   (num-cell (get-in probes [:pass-branch :fact-count]))]])))))
+     (str
+      (table ["指標" "値"]
+             (map tr
+                  [["登録済み cultivation lot" (num-cell (count lots))]
+                   ["未登録のまま提案された subject"
+                    (str (num-cell (count unreg)) " "
+                         (str/join " " (map #(code %) unreg)))]
+                   ["actor に投入した提案 (request)" (num-cell (count (steps)))]
+                   ["監査台帳 fact 総数" (num-cell (count ledger))]
+                   ["HARD hold（人間に届かない）" (crit (count hs))]
+                   ["HARD hold で発火した異なる rule 種"
+                    (str (crit (count rules)) " / "
+                         (num-cell (count hard-rule-catalog))
+                         " " (muted "(governor の全カタログ)"))]
+                   ["人間承認まで上がった escalation" (warn (count approvals))]
+                   ["Governor clean での自動確定" (ok (count commits))]
+                   ["actor が合格時に鋳造する fact 数（実測）"
+                    (num-cell (get-in probes [:pass-branch :fact-count]))]]))
+      "    <p class=\"muted\">このページは次の 4 つが全て成り立った時だけ書き出される — "
+      "成り立たなければ " (code "-main") " は throw し、ファイルは残らない（"
+      (ok "コメントではなく build 時の不変条件") "）: "
+      "① HARD hold が 1 件以上ある ② Governor clean の自動確定が 1 件以上ある "
+      "③ 各 lot の宣言（" (code ":expects") "）と Governor の実出力が完全一致する "
+      "④ カタログの hard rule が 1 種残らず発火している。"
+      "</p>\n"))))
 
 (defn- lots-section [db]
   (let [ledger (store/audit-trail db)
@@ -605,15 +693,28 @@
         by-rule (reduce (fn [m f]
                           (reduce #(update %1 %2 (fnil conj []) (:subject f)) m (:basis f)))
                         {} hs)
-        row (fn [[rule subjects]]
-              (tr [(crit (name rule))
-                   (num-cell (count subjects))
-                   (str/join " " (map #(code %) (sort (distinct subjects))))]))]
+        uncovered (uncovered-rules db)
+        row (fn [rule]
+              (let [subjects (get by-rule rule)]
+                (tr [(if (seq subjects) (crit (name rule)) (muted (name rule)))
+                     (if (seq subjects) (num-cell (count subjects)) (crit 0))
+                     (if (seq subjects)
+                       (str/join " " (map #(code %) (sort (distinct subjects))))
+                       (crit "このシナリオでは未発火"))])))]
     (section
-     (str "この実行で発火した HARD rule（" (count by-rule) " 種）")
-     "台帳から導出。ここに無い rule はこのシナリオが踏んでいないだけで、実装されていないという意味ではない。"
-     (table ["rule" "発火数" "subject"]
-            (map row (sort-by (comp str key) by-rule))))))
+     (str "HARD rule カバレッジ（" (count by-rule) " / " (count hard-rule-catalog) " 種）")
+     (str "左列は "
+          (code "perennial.governor")
+          " の source から抽出した hard rule の全カタログ（再入力ではない）、"
+          "件数と subject は台帳からの導出。"
+          (if (seq uncovered)
+            (crit (str "未発火: " (str/join " " (map name uncovered))))
+            (ok "この実行はカタログの全 rule を実際に発火させている。"))
+          " 発火が 1 種でも欠ければ "
+          (code "-main")
+          " はページを書かずに throw する。")
+     (table ["rule（governor の全カタログ）" "この実行での発火数" "subject"]
+            (map row hard-rule-catalog)))))
 
 (defn- escalation-section [db]
   (let [ledger (store/audit-trail db)
@@ -788,13 +889,38 @@
    "</footer>\n"
    "</body></html>\n"))
 
-(defn -main [& args]
+(defn -main
+  "Render the console -- but only if the run it is describing actually
+  demonstrated what the page claims. Four build-time invariants, each of
+  which aborts before anything is written:
+
+    1. at least one HARD hold reached the ledger
+    2. at least one proposal auto-committed on a clean Governor verdict
+    3. every lot's declared `:expects` equals the Governor's real output
+    4. every rule in `hard-rule-catalog` fired at least once
+
+  A console that shows no hold, or no clean commit, or whose prose has
+  drifted from the code, is worse than no console -- so it is not
+  written at all."
+  [& args]
   (let [out (or (first args) "docs/samples/operator-console.html")
         {:keys [db] :as result} (run-demo!)
-        hs (hard-holds db)]
+        hs (hard-holds db)
+        commits (filterv #(= :committed (:t %)) (store/audit-trail db))
+        mismatches (expectation-mismatches db)
+        uncovered (uncovered-rules db)]
     (when (empty? hs)
       (throw (ex-info "no governor hold fact on the ledger — refusing to write a console that shows no real hold"
                       {:ledger-facts (count (store/audit-trail db))})))
+    (when (empty? commits)
+      (throw (ex-info "no clean auto-commit on the ledger — a console showing only holds would misrepresent the gate"
+                      {:ledger-facts (count (store/audit-trail db))})))
+    (when (seq mismatches)
+      (throw (ex-info "scenario expectation mismatch — a lot's declared :expects is not what the Governor did"
+                      {:mismatches mismatches})))
+    (when (seq uncovered)
+      (throw (ex-info "hard rule never exercised — the page would claim full coverage it does not have"
+                      {:uncovered uncovered :catalog-size (count hard-rule-catalog)})))
     (io/make-parents out)
     (spit out (render result))
     (println "wrote" out

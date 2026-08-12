@@ -2484,12 +2484,13 @@ img,svg { max-width: 100%; height: auto; }
         <tr><td>actor に投入した提案 (request)</td><td><span class="num">22</span></td></tr>
         <tr><td>監査台帳 fact 総数</td><td><span class="num">28</span></td></tr>
         <tr><td>HARD hold（人間に届かない）</td><td><span class="critical">14</span></td></tr>
-        <tr><td>HARD hold で発火した異なる rule 種</td><td><span class="critical">14</span></td></tr>
+        <tr><td>HARD hold で発火した異なる rule 種</td><td><span class="critical">14</span> / <span class="num">14</span> <span class="muted">(governor の全カタログ)</span></td></tr>
         <tr><td>人間承認まで上がった escalation</td><td><span class="warn">6</span></td></tr>
         <tr><td>Governor clean での自動確定</td><td><span class="ok">2</span></td></tr>
         <tr><td>actor が合格時に鋳造する fact 数（実測）</td><td><span class="num">0</span></td></tr>
       </tbody>
     </table>
+    <p class="muted">このページは次の 4 つが全て成り立った時だけ書き出される — 成り立たなければ <code>-main</code> は throw し、ファイルは残らない（<span class="ok">コメントではなく build 時の不変条件</span>）: ① HARD hold が 1 件以上ある ② Governor clean の自動確定が 1 件以上ある ③ 各 lot の宣言（<code>:expects</code>）と Governor の実出力が完全一致する ④ カタログの hard rule が 1 種残らず発火している。</p>
   </section>
   <section class="card">
     <h2>Cultivation lots（operator 自身の圃場）</h2>
@@ -2535,10 +2536,10 @@ img,svg { max-width: 100%; height: auto; }
     </table>
   </section>
   <section class="card">
-    <h2>この実行で発火した HARD rule（14 種）</h2>
-    <p class="muted">台帳から導出。ここに無い rule はこのシナリオが踏んでいないだけで、実装されていないという意味ではない。</p>
+    <h2>HARD rule カバレッジ（14 / 14 種）</h2>
+    <p class="muted">左列は <code>perennial.governor</code> の source から抽出した hard rule の全カタログ（再入力ではない）、件数と subject は台帳からの導出。<span class="ok">この実行はカタログの全 rule を実際に発火させている。</span> 発火が 1 種でも欠ければ <code>-main</code> はページを書かずに throw する。</p>
     <table>
-      <thead><tr><th>rule</th><th>発火数</th><th>subject</th></tr></thead>
+      <thead><tr><th>rule（governor の全カタログ）</th><th>この実行での発火数</th><th>subject</th></tr></thead>
       <tbody>
         <tr><td><span class="critical">already-logged</span></td><td><span class="num">1</span></td><td><code>lot-001</code></td></tr>
         <tr><td><span class="critical">applicator-license-expired</span></td><td><span class="num">1</span></td><td><code>lot-003</code></td></tr>
