@@ -9,7 +9,7 @@
 
   Provenance, stated plainly because it matters for how the page should
   be read: this repo ships NO seed/demo data. `perennial.store` has no
-  `seed-db`/`demo-data`, and `perennial.sim` (`clojure -M:dev:run`,
+  `seed-db`/`demo-data`, and `perennial.sim` (`kbb -M:dev:run`,
   which was run BEFORE this file was written) is still a stub that
   prints `not yet implemented`. So the cultivation lots below are seeded
   HERE, by `seed-store`. What is NOT invented here is everything the
@@ -32,7 +32,7 @@
   are sorted explicitly rather than relying on map iteration order, so
   two runs are byte-identical.
 
-  Usage: `clojure -M:dev:render-html [out-file]`
+  Usage: `kbb -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
   (:require [clojure.java.io :as io]
             [kotoba.lang.text :as str]
@@ -865,7 +865,7 @@
    "<span class=\"badge\">圃場機器の直接操作は恒久ブロック</span></p>\n"
    "<p class=\"muted\">竹稈収穫・コルクガシ樹皮採取・観賞樹/苗木 — いずれも operator 自身が"
    "所有・栽培する圃場。他農家の作物を請け負う作業（ISIC 0161）ではない。"
-   "このページは " (code "clojure -M:dev:render-html") " が "
+   "このページは " (code "kbb -M:dev:render-html") " が "
    (code "perennial.operation") " → " (code "perennial.governor") " → "
    (code "perennial.store") " を実際に走らせて生成したもので、手書きの数値は無い。</p>\n"
    "<main>\n"
@@ -882,7 +882,7 @@
    (approver-section probes)
    "</main>\n"
    "<footer>\n"
-   "  <p>生成: <code>clojure -M:dev:render-html</code>（<code>perennial.render-html</code>）。"
+   "  <p>生成: <code>kbb -M:dev:render-html</code>（<code>perennial.render-html</code>）。"
    "決定的 — 同じ seed なら byte 単位で同一。時刻・乱数はページに入らない。</p>\n"
    "  <p>HARD hold は人間承認で上書きできない。圃場機器（収穫機・散布機・施用機）の操作と"
    "農薬散布の最終決定は、この actor の権限に存在しない。</p>\n"
