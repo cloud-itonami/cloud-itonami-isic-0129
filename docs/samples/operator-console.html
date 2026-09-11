@@ -2471,7 +2471,7 @@ img,svg { max-width: 100%; height: auto; }
   <h1>多年生作物（その他）栽培オペレーション — Operator Console</h1>
 </header>
 <p><span class="badge">ISIC Rev.5 0129</span> <span class="badge">read-only sample</span> <span class="badge">governor-gated</span> <span class="badge">圃場機器の直接操作は恒久ブロック</span></p>
-<p class="muted">竹稈収穫・コルクガシ樹皮採取・観賞樹/苗木 — いずれも operator 自身が所有・栽培する圃場。他農家の作物を請け負う作業（ISIC 0161）ではない。このページは <code>clojure -M:dev:render-html</code> が <code>perennial.operation</code> → <code>perennial.governor</code> → <code>perennial.store</code> を実際に走らせて生成したもので、手書きの数値は無い。</p>
+<p class="muted">竹稈収穫・コルクガシ樹皮採取・観賞樹/苗木 — いずれも operator 自身が所有・栽培する圃場。他農家の作物を請け負う作業（ISIC 0161）ではない。このページは <code>kbb -M:dev:render-html</code> が <code>perennial.operation</code> → <code>perennial.governor</code> → <code>perennial.store</code> を実際に走らせて生成したもので、手書きの数値は無い。</p>
 <main>
   <section class="card">
     <h2>運用サマリ（この実行の実測値）</h2>
@@ -2687,7 +2687,7 @@ img,svg { max-width: 100%; height: auto; }
   </section>
 </main>
 <footer>
-  <p>生成: <code>clojure -M:dev:render-html</code>（<code>perennial.render-html</code>）。決定的 — 同じ seed なら byte 単位で同一。時刻・乱数はページに入らない。</p>
+  <p>生成: <code>kbb -M:dev:render-html</code>（<code>perennial.render-html</code>）。決定的 — 同じ seed なら byte 単位で同一。時刻・乱数はページに入らない。</p>
   <p>HARD hold は人間承認で上書きできない。圃場機器（収穫機・散布機・施用機）の操作と農薬散布の最終決定は、この actor の権限に存在しない。</p>
 </footer>
 </body></html>
