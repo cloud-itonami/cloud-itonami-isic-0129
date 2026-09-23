@@ -1,5 +1,5 @@
 (ns perennial.facts-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [perennial.facts :as facts]))
 
 ;; ──────────────────────── Crop-Operation-Type Lookups ──────────────────────

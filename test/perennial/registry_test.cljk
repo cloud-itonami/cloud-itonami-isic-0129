@@ -1,5 +1,5 @@
 (ns perennial.registry-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [perennial.registry :as registry]))
 
 ;; ──────────────────────── Applicator License ──────────────────────

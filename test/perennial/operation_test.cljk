@@ -1,5 +1,5 @@
 (ns perennial.operation-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [perennial.operation :as operation]
             [perennial.governor :as governor]))
 
