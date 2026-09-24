@@ -32,7 +32,7 @@
       workers may safely re-enter the treated field), maximum safe wind
       speed (spray-drift risk), and minimum buffer zone (distance to
       sensitive sites such as water bodies, schools, or residences)."
-  (:require [clojure.set :as set]))
+  (:require [kotoba.lang.coll :as set]))
 
 (def crop-operation-types
   "Valid perennial-crop cultivation-operation categories and their safety
